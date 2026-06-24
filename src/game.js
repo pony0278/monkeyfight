@@ -25,8 +25,8 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
-    this.camOffset = new THREE.Vector3(0, 15, 15);
+    this.camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
+    this.camOffset = new THREE.Vector3(0, 10.5, 12.5); // closer & lower → punchier
     this.camTarget = new THREE.Vector3();
 
     const { clouds } = buildArena(this.scene);
@@ -38,6 +38,7 @@ export class Game {
     this.player = null;
     this.running = false;
     this.matchOver = false;
+    this.hitstop = 0;             // brief freeze-frame on impact for punch weight
 
     this._banGeo = new THREE.CapsuleGeometry(0.12, 0.3, 4, 8);
     this._banGeo.rotateZ(Math.PI / 2);
@@ -101,6 +102,7 @@ export class Game {
     pos.y = 1.2;
     mesh.position.copy(pos);
     this.scene.add(mesh);
+    owner.startThrow();
     this.bananas.push({
       mesh,
       pos,
@@ -132,7 +134,8 @@ export class Game {
       const hp = best.pos.clone(); hp.y = 1;
       this.fx.burst(hp, 0xffffff, 12, 7, 0.12);
       this.fx.ring(best.pos);
-      this.fx.addShake(0.35 + best.damage * 0.004);
+      this.fx.addShake(0.4 + best.damage * 0.004);
+      this.hitstop = Math.max(this.hitstop, 0.06);
       Audio.punch();
       Audio.hoot(0.8 + Math.random() * 0.4);
       if (this.cb.onHit) this.cb.onHit(attacker, best);
@@ -158,7 +161,8 @@ export class Game {
           m.lastHitBy = b.owner;
           if (!m.hit(dir, 8, 9)) continue; // invulnerable — banana flies past
           this.fx.burst(b.pos.clone(), 0xffe14d, 16, 6, 0.14);
-          this.fx.addShake(0.3);
+          this.fx.addShake(0.32);
+          this.hitstop = Math.max(this.hitstop, 0.04);
           Audio.splat();
           Audio.hoot(1.2);
           if (this.cb.onHit) this.cb.onHit(b.owner, m);
@@ -361,6 +365,16 @@ export class Game {
   update(dt, input) {
     if (!this.running) { this.render(dt); return; }
 
+    // Hitstop: hold everything still for a few frames on impact, but keep
+    // particles and the camera shake alive so the hit reads as punchy.
+    if (this.hitstop > 0) {
+      this.hitstop -= dt;
+      this.fx.update(dt);
+      this.updateCamera(dt);
+      this.render(dt);
+      return;
+    }
+
     // tag lastHitBy by watching damage application is done in hit(); set here
     for (const m of this.monkeys) {
       if (m === this.player) {
@@ -407,7 +421,11 @@ export class Game {
       cz = cz * 0.6 + az * 0.4;
     }
     this.camTarget.lerp(new THREE.Vector3(cx, 0.6, cz), 1 - Math.pow(0.001, dt));
-    const desired = this.camTarget.clone().add(this.camOffset);
+    // pull back a little when the action is spread out so nobody flies off-screen
+    let spread = 0;
+    for (const m of alive) spread = Math.max(spread, Math.hypot(m.pos.x - cx, m.pos.z - cz));
+    const zoom = 1 + Math.min(spread / 10, 0.55);
+    const desired = this.camTarget.clone().add(this.camOffset.clone().multiplyScalar(zoom));
     this.camera.position.lerp(desired, 1 - Math.pow(0.0005, dt));
     this.camera.lookAt(this.camTarget);
     this.fx.applyShake(this.camera);
