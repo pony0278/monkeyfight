@@ -25,8 +25,12 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
-    this.camOffset = new THREE.Vector3(0, 10.5, 12.5); // closer & lower → punchier
+    // Orthographic ("diorama") camera — no perspective distortion, every monkey
+    // is the same size on screen. Bounds are set from frustumSize in resize().
+    this.frustumSize = 19;        // vertical world units visible at zoom 1
+    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 300);
+    this.camOffset = new THREE.Vector3(0, 15, 18); // fixed iso view direction
+    this.camZoom = 1;             // smoothed zoom (smaller = pulled back)
     this.camTarget = new THREE.Vector3();
 
     const { clouds } = buildArena(this.scene);
@@ -52,7 +56,12 @@ export class Game {
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
-    this.camera.aspect = w / h;
+    const aspect = w / h;
+    const s = this.frustumSize;
+    this.camera.left = -s * aspect / 2;
+    this.camera.right = s * aspect / 2;
+    this.camera.top = s / 2;
+    this.camera.bottom = -s / 2;
     this.camera.updateProjectionMatrix();
   }
 
@@ -421,11 +430,20 @@ export class Game {
       cz = cz * 0.6 + az * 0.4;
     }
     this.camTarget.lerp(new THREE.Vector3(cx, 0.6, cz), 1 - Math.pow(0.001, dt));
-    // pull back a little when the action is spread out so nobody flies off-screen
+
+    // Pull back (lower ortho zoom) when the action spreads out so nobody flies
+    // off-screen; with an orthographic camera, distance doesn't change scale —
+    // camera.zoom does.
     let spread = 0;
     for (const m of alive) spread = Math.max(spread, Math.hypot(m.pos.x - cx, m.pos.z - cz));
-    const zoom = 1 + Math.min(spread / 10, 0.55);
-    const desired = this.camTarget.clone().add(this.camOffset.clone().multiplyScalar(zoom));
+    const targetZoom = 1 / (1 + Math.min(spread / 12, 0.5));
+    this.camZoom += (targetZoom - this.camZoom) * Math.min(1, dt * 3);
+    if (Math.abs(this.camera.zoom - this.camZoom) > 0.0005) {
+      this.camera.zoom = this.camZoom;
+      this.camera.updateProjectionMatrix();
+    }
+
+    const desired = this.camTarget.clone().add(this.camOffset);
     this.camera.position.lerp(desired, 1 - Math.pow(0.0005, dt));
     this.camera.lookAt(this.camTarget);
     this.fx.applyShake(this.camera);
