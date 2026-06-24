@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="Monkey Mayhem — a goofy 3D monkey brawler. Punch, fling bananas and yeet your rivals off the floating jungle arena!" />
+  <title>Monkey Mayhem 🐵</title>
+  <!-- Poki SDK (no-ops gracefully when running outside Poki) -->
+  <script src="//game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>
+  <link rel="stylesheet" href="./style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-pill">🏆 <span id="hud-score">0</span></div>
+      <div class="hud-pill">Round <span id="hud-round">1</span></div>
+      <div class="hud-pill">🐵 <span id="hud-alive">4</span></div>
+    </div>
+    <div class="hud-damage">
+      <span>OUCH</span>
+      <div class="dmg-bar"><div id="dmg-fill"></div></div>
+      <span id="dmg-pct">0%</span>
+    </div>
+    <button id="btn-mute" class="icon-btn" aria-label="Mute">🔊</button>
+  </div>
+
+  <!-- On-screen touch controls -->
+  <div id="touch" class="hidden">
+    <div id="joy-zone"><div id="joy-base"><div id="joy-knob"></div></div></div>
+    <div id="touch-buttons">
+      <button id="btn-jump" class="action-btn jump">JUMP</button>
+      <button id="btn-throw" class="action-btn throw">🍌</button>
+      <button id="btn-punch" class="action-btn punch">👊</button>
+    </div>
+  </div>
+
+  <!-- Title screen -->
+  <div id="title" class="overlay">
+    <div class="panel">
+      <h1>MONKEY<br><span class="big">MAYHEM</span></h1>
+      <p class="tag">Punch 'em. Banana 'em. <b>Yeet 'em</b> off the island. 🐵🍌</p>
+      <button id="btn-play" class="primary">PLAY</button>
+      <div class="howto">
+        <div class="howto-row"><b>Move</b> WASD / Joystick</div>
+        <div class="howto-row"><b>Punch</b> J / 👊 / Left-click</div>
+        <div class="howto-row"><b>Banana</b> K / 🍌 / Right-click</div>
+        <div class="howto-row"><b>Jump</b> Space / JUMP</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Round cleared -->
+  <div id="roundover" class="overlay hidden">
+    <div class="panel">
+      <h2 id="ro-title">ROUND CLEARED!</h2>
+      <p id="ro-sub" class="tag">The crowd goes bananas! 🍌🍌🍌</p>
+      <div class="loading-ad" id="ro-loading">loading next round…</div>
+      <button id="btn-next" class="primary hidden">NEXT ROUND</button>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div id="gameover" class="overlay hidden">
+    <div class="panel">
+      <h2>YOU GOT YEETED 💀</h2>
+      <p class="tag">You reached <b>Round <span id="go-round">1</span></b> with <b><span id="go-score">0</span></b> KOs.</p>
+      <button id="btn-revive" class="reward hidden">📺 WATCH AD TO REVIVE</button>
+      <button id="btn-restart" class="primary">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
